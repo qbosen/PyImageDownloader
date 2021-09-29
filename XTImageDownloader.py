@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import os
 import os.path
 import re
-import urllib2
-from Tkinter import *
-import tkFileDialog
+import requests
+import tkinter as tk
+from tkinter import filedialog
 import threading
 
 
@@ -30,14 +30,14 @@ class Picture(object):
 
         # 已存在则不重复下载
         if os.path.exists(pic_path):
-            print ('pic has existed:' + self.url)
+            print('pic has existed:' + self.url)
             self.error_reason = "pic has existed:"
             download_pic_callback(self)
             return
 
         # 图片链接前缀不包含http
         if not self.url.startswith("http"):
-            print ('pic has invalid url:' + self.url)
+            print('pic has invalid url:' + self.url)
             self.error_reason = "pic has invalid url"
             download_pic_callback(self)
             return
@@ -48,12 +48,11 @@ class Picture(object):
         }
 
         # 下载图片
-        request = urllib2.Request(self.url, None, header)
         try:
-            response = urllib2.urlopen(request, timeout=10)
+            response = requests.get(self.url, headers=header)
         # 下载失败
-        except Exception, error:
-            print ('pic cannot download:' + self.url)
+        except Exception as error:
+            print('pic cannot download:' + self.url)
             self.error_reason = str(error)
             download_pic_callback(self)
             return
@@ -61,10 +60,10 @@ class Picture(object):
         # 保存图片
         try:
             fp = open(pic_path, 'wb')
-            fp.write(response.read())
+            fp.write(response.content)
             fp.close()
         # 保存失败
-        except IOError, error:
+        except IOError as error:
             print(error)
             self.error_reason = str(error)
             download_pic_callback(self)
@@ -81,7 +80,7 @@ class Picture(object):
         # 获取图片格式后缀 如果没有 默认jpg
         urls = pic_url.split(".")
         if len(urls) > 1:
-            pic_type = urls[len(urls)-1]
+            pic_type = urls[len(urls) - 1]
         else:
             pic_type = "jpg"
 
@@ -172,32 +171,32 @@ class XTImageDownloader(object):
         self.thread_lock = threading.Lock()
         self.search_button = None
         # 图形界面相关
-        self.root = Tk()
+        self.root = tk.Tk()
         self.root.title("XTImageDownloader")
-        self.path = StringVar()
-        self.title = StringVar()
+        self.path = tk.StringVar()
+        self.title = tk.StringVar()
         self.title.set("请选择Markdown文件所在文件夹")
         self.list_box = None
-        Label(self.root, textvariable=self.title).grid(row=0, column=1)
-        Label(self.root, text="文件夹路径:").grid(row=1, column=0)
-        Entry(self.root, textvariable=self.path).grid(row=1, column=1)
-        Button(self.root, text="选择路径", command=self.select_path).grid(row=1, column=2)
+        tk.Label(self.root, textvariable=self.title).grid(row=0, column=1)
+        tk.Label(self.root, text="文件夹路径:").grid(row=1, column=0)
+        tk.Entry(self.root, textvariable=self.path).grid(row=1, column=1)
+        tk.Button(self.root, text="选择路径", command=self.select_path).grid(row=1, column=2)
         self.root.mainloop()
 
     # 选择文件夹
     def select_path(self):
-        self.path.set(tkFileDialog.askdirectory())
+        self.path.set(tk.filedialog.askdirectory())
         # 用户选中文件夹之后 显示下载按钮
         if self.path.get() != "":
-            self.search_button = Button(self.root, text="开始搜索并下载", command=self.start_search_dir)
+            self.search_button = tk.Button(self.root, text="开始搜索并下载", command=self.start_search_dir)
             self.search_button.grid(row=2, column=1)
             return self.path
 
     # 开始搜索文件夹 并且下载
     def start_search_dir(self):
-        self.search_button['state'] = DISABLED
+        self.search_button['state'] = tk.DISABLED
         self.search_button['text'] = "正在下载..."
-        
+
         self.all_pic_count = 0
         self.current_pic_index = 0
         self.download_error_list = []
@@ -253,25 +252,26 @@ class XTImageDownloader(object):
             print("url:" + pic.url)
             print("error_reason:" + pic.error_reason)
 
-        Label(self.root, text="部分图片下载失败:").grid(row=4, column=1)
+        tk.Label(self.root, text="部分图片下载失败:").grid(row=4, column=1)
 
         # GUI
         # 新建listbox
-        self.list_box = Listbox(self.root)
+        self.list_box = tk.Listbox(self.root)
         for pic in download_error_list:
-            self.list_box.insert(END, pic.url + " -> " + pic.error_reason)
-        self.list_box.grid(row=5, column=0, columnspan=3, sticky=W+E+N+S)
+            self.list_box.insert(tk.END, pic.url + " -> " + pic.error_reason)
+        self.list_box.grid(row=5, column=0, columnspan=3, sticky=tk.W + tk.E + tk.N + tk.S)
 
         # 垂直 scrollbar
-        scr1 = Scrollbar(self.root)
+        scr1 = tk.Scrollbar(self.root)
         self.list_box.configure(yscrollcommand=scr1.set)
         scr1['command'] = self.list_box.yview
-        scr1.grid(row=5, column=4, sticky=W+E+N+S)
+        scr1.grid(row=5, column=4, sticky=tk.W + tk.E + tk.N + tk.S)
         # 水平 scrollbar
-        scr2 = Scrollbar(self.root, orient='horizontal')
+        scr2 = tk.Scrollbar(self.root, orient='horizontal')
         self.list_box.configure(xscrollcommand=scr2.set)
         scr2['command'] = self.list_box.xview
-        scr2.grid(row=6, column=0, columnspan=3, sticky=W+E+N+S)
+        scr2.grid(row=6, column=0, columnspan=3, sticky=tk.W + tk.E + tk.N + tk.S)
 
 
-dir_picker = XTImageDownloader()
+if __name__ == '__main__':
+    dir_picker = XTImageDownloader()
